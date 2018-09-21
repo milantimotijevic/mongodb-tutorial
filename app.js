@@ -75,7 +75,16 @@ MongoClient.connect("mongodb://localhost:27017/", function(mongoerr, db) {
     });
 
     app.get('/test2', function(req, res) {
-
+        // return name-id pairs for residences
+        dbo.collection("residences").find({}, {projection: {_id: 1, name: 1}}).toArray(function(err, result) {
+            const response = [];
+            result.forEach(function(item) {
+                var tempObj = {};
+                tempObj[item.name] = item._id;
+                response.push(tempObj);
+            });
+            res.send(response);
+        });
     });
 });
 
