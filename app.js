@@ -13,8 +13,22 @@ var MongoClient = require('mongodb').MongoClient;
 MongoClient.connect("mongodb://localhost:27017/", function(mongoerr, db) {
     const dbo = db.db("practicedb");
 
+    // increments and then fetches next ID value for appropriate collection; used when inserting new documents as a way of simulating ID auto incrementation
+    // auto incrementing is probably a bad idea
+    function getNextSequenceValue(sequenceName, httpResponse) {
+        dbo.collection("counters").findOneAndUpdate({_id: sequenceName}, {$inc: {value: 1}}, {returnNewDocument: true}, function(err, result) {
+            httpResponse.send(result.value);
+        });
+    }
+
     app.get('/characters', function(req, res) {
-        dbo.collection("people").find({}).toArray(function(endpointerr, result) {
+        dbo.collection("people").find({}).toArray(function(endpointerr, result) { //apparently toArray can only be called for fetch operations
+            res.send(result);
+        });
+    });
+
+    app.post('/insert-character', function(req, res) {
+        dbo.collection("people").insertOne(req.body, function(err, result) {
             res.send(result);
         });
     });
@@ -31,6 +45,37 @@ MongoClient.connect("mongodb://localhost:27017/", function(mongoerr, db) {
         dbo.collection("people").update({name: character.name}, character, function(err, result) {
             res.send(result);
         });
+    });
+
+    app.get('/residences', function(req, res) {
+        dbo.collection("residences").aggregate([
+            {
+                $lookup: {
+                    from: "people",
+                    localField: "_id",
+                    foreignField: "residence_id",
+                    as: "people"
+                }
+            }
+        ]).toArray(function(err, result) {
+            res.send(result);
+        });
+    });
+
+    app.post('/residences', function(req, res) {
+        dbo.collection("residences").insertMany(req.body, function(err, result) {
+            res.send(result);
+        });
+    });
+
+    app.get('/test', function(req, res) {
+        dbo.collection("people").find({race: "Human"}, {projection: {_id: 0, residence_id: 0}}).toArray(function(req, result) {
+            res.send(result);
+        });
+    });
+
+    app.get('/test2', function(req, res) {
+
     });
 });
 
